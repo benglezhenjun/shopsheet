@@ -1,41 +1,31 @@
 # Changelog
 
-## 0.1.0 - 2026-06-24
+All notable changes to ShopSheet are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
-### Added
+## 1.0.0 - 2026-06-24
 
-- Created ShopSheet as a local-first ecommerce spreadsheet quality workbench.
-- Added order, SKU, and refund example datasets.
-- Added Chinese-header example datasets for localized merchant exports.
-- Added deterministic data quality checks for duplicate orders, invalid phones, missing SKU references, negative quantities, missing addresses, and refund mismatches.
-- Added column normalization for common English and Chinese merchant exports.
-- Added FastAPI endpoints for health checks, demo analysis, upload analysis, and demo exports.
-- Added React/Vite operator workspace with KPI summary, upload flow, issue queue, order preview, and deliverable downloads.
-- Added CSV/Markdown export package for clean orders, issue rows, and quality report.
-- Added row-level `source_table` metadata to issue exports.
-- Added upload handling for same-named files from different input roles.
-- Added 5 MB per-file upload limit with HTTP 413 responses.
-- Added browser E2E coverage for upload analysis, deliverable downloads, missing-file handling, bad-header validation, and oversized upload handling.
-- Isolated browser E2E ports to avoid accidentally testing another local Vite app.
-- Added scripted Docker runtime smoke verification.
-- Added reliable local dev start/stop scripts with logs, PID metadata, health checks, and port cleanup.
-- Added CI Docker runtime smoke coverage.
-- Added Dependabot configuration for GitHub Actions, Python, and npm.
-- Added showcase acceptance and release checklist documentation.
-- Added CI workflow, Docker configuration, README, screenshots, issue templates, and verification notes.
+First public release.
 
-### Verified
+### Features
 
-- Backend tests: 21 passed.
-- Backend lint: passed.
-- Python dependency audit: passed.
-- Frontend dependency audit: passed.
-- Frontend production build: passed.
-- Browser E2E: 4 passed.
-- Docker Compose config, build, and runtime smoke test: passed locally.
+- Import order, SKU, and refund tables from CSV (UTF-8 and GB18030) or XLSX, keeping identifier columns as text so zero-padded SKUs are not corrupted.
+- Normalize common English and Simplified Chinese merchant export headers into canonical columns.
+- Deterministic data-quality checks: duplicate orders, invalid mainland-China mobile numbers, missing SKU references, negative quantities, missing addresses, unparseable order dates, unparseable numeric cells (quantity, unit price, SKU cost, refund amount), duplicate SKUs, negative SKU cost, refunds against unknown orders, and refunds exceeding the matched order amount.
+- `clean_orders.csv` contains only order rows that passed every quality check, with calculated line amount and estimated margin columns; `clean_order_count` and `excluded_order_count` are reported alongside the other metrics.
+- `estimated_gross_margin` excludes order rows with unknown SKU cost from the margin contribution; the estimation rule is documented in the API docstring, the report, and the README.
+- Merchant deliverables: `clean_orders.csv`, `issue_rows.csv` (one row per detected issue and source row, with `source_table` metadata), and `quality_report.md`.
+- FastAPI backend with typed Pydantic response models, a 5 MB per-file upload limit (HTTP 413), localhost-scoped CORS, and threadpool-offloaded analysis.
+- Simplified Chinese React/Vite operator workspace: KPI summary, issue queue with localized labels, clean order preview, upload flow, and deliverable downloads.
+
+### Tooling
+
+- Backend tests (pytest) with coverage gating, ruff lint, and pip-audit.
+- Playwright browser E2E on isolated ports, covering upload analysis, deliverable downloads, the missing-file guard, bad-header validation, and oversized uploads.
+- CI (GitHub Actions) for backend, frontend, Docker runtime smoke, and E2E; Dependabot for GitHub Actions, pip, and npm.
+- Docker Compose runtime and Windows dev/verify helper scripts. Cross-platform (bash and PowerShell) commands documented in the README.
 
 ### Known Limitations
 
-- Remote GitHub Actions results are pending until the repository is pushed.
-- Upload result history is currently in-memory on the browser side.
-- Inventory workflows are planned but not implemented yet.
+- Upload result history is in-memory in the browser only.
+- Inventory workflows are planned but not yet implemented.
+- Local-first by design: no authentication, multi-tenancy, or internet-facing hardening.

@@ -165,13 +165,36 @@ h2 {
   text-transform: uppercase;
 }
 
-.fileInput input {
+.fileInput input.fileNativeInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fileInput .fileTrigger {
+  align-items: center;
+  background: #fff;
   border: 1px solid #d8e0db;
   border-radius: 7px;
   color: #45544e;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  justify-content: center;
   min-height: 39px;
-  padding: 7px;
-  width: 100%;
+  padding: 7px 12px;
+  text-transform: none;
+}
+
+.fileInput .fileTrigger:hover {
+  border-color: #b9c6bf;
 }
 
 .fileInput strong {

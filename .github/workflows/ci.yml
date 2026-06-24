@@ -18,7 +18,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
       - name: Run backend tests
-        run: python -m pytest -q
+        run: python -m pytest -q --cov=shopsheet --cov-report=term-missing --cov-fail-under=90
       - name: Run backend lint
         run: python -m ruff check src tests
       - name: Audit Python dependencies
@@ -38,7 +38,7 @@ jobs:
         run: npm ci
       - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm audit --audit-level=low
+        run: npm audit --audit-level=high
       - name: Build frontend
         working-directory: frontend
         run: npm run build
@@ -62,20 +62,20 @@ jobs:
       - name: Build Docker images
         run: docker compose build
       - name: Run Docker runtime smoke test
+        env:
+          SHOPSHEET_BACKEND_PORT: "18000"
+          SHOPSHEET_FRONTEND_PORT: "15173"
         run: |
-          docker compose up -d
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8000/health; then
-              break
-            fi
-            sleep 2
-          done
-          curl -fsS http://127.0.0.1:8000/health
-          curl -fsS http://127.0.0.1:5173 > /dev/null
-          curl -fsS http://127.0.0.1:5173/api/demo-report | python -m json.tool > /dev/null
-          curl -fsS http://127.0.0.1:5173/api/demo-export/issue_rows.csv | grep "source_table"
+          docker compose up -d --wait
+          curl -fsS http://127.0.0.1:18000/health
+          curl -fsS http://127.0.0.1:15173 > /dev/null
+          curl -fsS http://127.0.0.1:15173/api/demo-report | python -m json.tool > /dev/null
+          curl -fsS http://127.0.0.1:15173/api/demo-export/issue_rows.csv | grep "source_table"
       - name: Stop Docker runtime
         if: always()
+        env:
+          SHOPSHEET_BACKEND_PORT: "18000"
+          SHOPSHEET_FRONTEND_PORT: "15173"
         run: docker compose down --remove-orphans
 
   e2e:

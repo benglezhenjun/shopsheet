@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from shopsheet.economics import enrich_orders
+
 
 @dataclass(frozen=True)
 class QualityIssue:
@@ -21,9 +23,20 @@ class QualityReport:
 def analyze_shop_data(
     orders: pd.DataFrame, skus: pd.DataFrame, refunds: pd.DataFrame
 ) -> QualityReport:
+    """Analyze merchant tables.
+
+    estimated_gross_margin is a rough margin estimate: order rows with unknown SKU
+    cost are excluded from margin contribution, and refunds are deducted by total
+    refund amount.
+    """
     normalized_orders = orders.copy()
     normalized_skus = skus.copy()
     normalized_refunds = refunds.copy()
+
+    invalid_quantity = _invalid_numeric_rows(normalized_orders, "quantity")
+    invalid_unit_price = _invalid_numeric_rows(normalized_orders, "unit_price")
+    invalid_cost = _invalid_numeric_rows(normalized_skus, "cost")
+    invalid_refund_amount = _invalid_numeric_rows(normalized_refunds, "refund_amount")
 
     normalized_orders["quantity"] = pd.to_numeric(
         normalized_orders["quantity"], errors="coerce"
@@ -36,18 +49,16 @@ def analyze_shop_data(
         normalized_refunds["refund_amount"], errors="coerce"
     ).fillna(0)
 
-    positive_orders = normalized_orders[normalized_orders["quantity"] > 0].copy()
-    positive_orders["line_amount"] = positive_orders["quantity"] * positive_orders["unit_price"]
-
-    sku_costs = normalized_skus.set_index("sku")["cost"].to_dict()
-    positive_orders["line_cost"] = positive_orders.apply(
-        lambda row: row["quantity"] * sku_costs.get(row["sku"], 0),
-        axis=1,
-    )
+    enriched_orders = enrich_orders(normalized_orders, normalized_skus)
+    positive_orders = enriched_orders[enriched_orders["quantity"] > 0].copy()
+    known_margin_orders = positive_orders[positive_orders["unit_cost"].notna()]
 
     gross_sales = round(float(positive_orders["line_amount"].sum()), 2)
     refund_amount = round(float(normalized_refunds["refund_amount"].sum()), 2)
-    gross_margin = round(gross_sales - float(positive_orders["line_cost"].sum()) - refund_amount, 2)
+    gross_margin = round(
+        float(known_margin_orders["estimated_line_margin"].sum()) - refund_amount,
+        2,
+    )
 
     metrics: dict[str, float | int] = {
         "order_rows": int(len(normalized_orders)),
@@ -60,6 +71,42 @@ def analyze_shop_data(
 
     issues: list[QualityIssue] = []
 
+    if not invalid_quantity.empty:
+        issues.append(
+            QualityIssue(
+                code="invalid_quantity",
+                message="Order quantity cannot be parsed as a number.",
+                rows=_row_numbers(invalid_quantity),
+            )
+        )
+
+    if not invalid_unit_price.empty:
+        issues.append(
+            QualityIssue(
+                code="invalid_unit_price",
+                message="Order unit price cannot be parsed as a number.",
+                rows=_row_numbers(invalid_unit_price),
+            )
+        )
+
+    if not invalid_cost.empty:
+        issues.append(
+            QualityIssue(
+                code="invalid_cost",
+                message="SKU cost cannot be parsed as a number.",
+                rows=_row_numbers(invalid_cost),
+            )
+        )
+
+    if not invalid_refund_amount.empty:
+        issues.append(
+            QualityIssue(
+                code="invalid_refund_amount",
+                message="Refund amount cannot be parsed as a number.",
+                rows=_row_numbers(invalid_refund_amount),
+            )
+        )
+
     duplicated = normalized_orders[normalized_orders["order_id"].duplicated(keep=False)]
     if not duplicated.empty:
         issues.append(
@@ -71,7 +118,7 @@ def analyze_shop_data(
         )
 
     invalid_phone = normalized_orders[
-        ~normalized_orders["phone"].astype(str).str.fullmatch(r"1\d{10}")
+        ~_phone_strings(normalized_orders["phone"]).str.fullmatch(r"1\d{10}")
     ]
     if not invalid_phone.empty:
         issues.append(
@@ -151,7 +198,10 @@ def analyze_shop_data(
         )
 
     order_amounts = (
-        positive_orders.groupby("order_id", as_index=True)["line_amount"].sum().to_dict()
+        positive_orders.assign(_order_id=positive_orders["order_id"].astype(str))
+        .groupby("_order_id", as_index=True)["line_amount"]
+        .sum()
+        .to_dict()
     )
     known_order_ids = set(normalized_orders["order_id"].astype(str))
     refund_unknown_order = normalized_refunds[
@@ -168,7 +218,10 @@ def analyze_shop_data(
 
     refund_exceeds = normalized_refunds[
         normalized_refunds.apply(
-            lambda row: row["refund_amount"] > order_amounts.get(row["order_id"], 0),
+            lambda row: (
+                str(row["order_id"]) in order_amounts
+                and row["refund_amount"] > order_amounts[str(row["order_id"])]
+            ),
             axis=1,
         )
     ]
@@ -186,3 +239,23 @@ def analyze_shop_data(
 
 def _row_numbers(frame: pd.DataFrame) -> list[int]:
     return [int(index) + 2 for index in frame.index]
+
+
+def _invalid_numeric_rows(frame: pd.DataFrame, column: str) -> pd.DataFrame:
+    values = frame[column]
+    parsed = pd.to_numeric(values, errors="coerce")
+    nonempty = values.notna() & values.astype("string").str.strip().ne("")
+    return frame[parsed.isna() & nonempty]
+
+
+def _phone_strings(series: pd.Series) -> pd.Series:
+    return series.map(_clean_phone_value)
+
+
+def _clean_phone_value(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    text = str(value).strip()
+    if text.endswith(".0") and text[:-2].isdigit():
+        return text[:-2]
+    return text

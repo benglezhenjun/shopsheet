@@ -4,31 +4,31 @@ ShopSheet is intentionally small and focused. Contributions should improve the m
 
 ## Development Checks
 
-Install backend development dependencies:
+Install backend development dependencies (any OS):
 
-```powershell
+```bash
 python -m pip install -e ".[dev]"
 ```
 
-Run backend tests:
+Run backend tests (any OS):
 
-```powershell
+```bash
 python -m pytest -q
 python -m ruff check src tests
 python -m pip_audit -r requirements.txt
 ```
 
-Run frontend checks:
+Run frontend checks (any OS):
 
-```powershell
+```bash
 cd frontend
 npm ci
-npm audit --audit-level=low
+npm audit --audit-level=high
 npm run build
 npm run e2e -- --reporter=line
 ```
 
-Run Docker runtime smoke when Docker Desktop is available:
+Run Docker runtime smoke when Docker Desktop is available (Windows helper):
 
 ```powershell
 .\scripts\smoke-docker.ps1

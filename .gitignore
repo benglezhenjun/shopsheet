@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
 .ruff_cache/
 .mypy_cache/
 dist/
@@ -15,3 +16,15 @@ frontend/node_modules/
 frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
+examples/*.csv
+examples/*.xlsx
+!examples/orders_messy.csv
+!examples/skus.csv
+!examples/refunds.csv
+!examples/orders_chinese_headers.csv
+!examples/skus_chinese_headers.csv
+!examples/refunds_chinese_headers.csv
+/orders.csv
+/skus.csv
+/refunds.csv
+/*.xlsx
