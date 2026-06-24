@@ -1,0 +1,11 @@
+node_modules/
+test-results/
+playwright-report/
+.playwright-cli/
+src/
+e2e/
+public/
+*.log
+package*.json
+playwright.config.js
+vite.config.js

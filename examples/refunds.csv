@@ -1,0 +1,3 @@
+refund_id,order_id,refund_amount,reason
+R-9001,O-1001,20.00,partial refund
+R-9002,O-1003,80.00,customer return

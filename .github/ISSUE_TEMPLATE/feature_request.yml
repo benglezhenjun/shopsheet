@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a focused merchant spreadsheet workflow.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Merchant Problem
+      description: What practical spreadsheet workflow should this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Input And Output
+      description: Describe synthetic fields and expected deliverables.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Order workflow
+        - SKU workflow
+        - Refund workflow
+        - Inventory workflow
+        - Export/reporting
+    validations:
+      required: true

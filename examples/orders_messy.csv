@@ -1,0 +1,7 @@
+order_id,sku,quantity,unit_price,phone,shipping_address,order_date
+O-1001,SKU-RED-M,2,79.90,13800138000,Shanghai Pudong,2026-06-01
+O-1002,SKU-BLUE-S,1,129.00,not-a-phone,Hangzhou Xihu,2026-06-01
+O-1002,SKU-BLUE-S,1,129.00,13900139000,Hangzhou Xihu,2026-06-01
+O-1003,SKU-MISSING,1,59.00,13700137000,Beijing Chaoyang,2026-06-02
+O-1004,SKU-RED-M,-1,79.90,13600136000,Shenzhen Nanshan,2026-06-02
+O-1005,SKU-GREEN-L,3,49.90,13500135000,,2026-06-03
