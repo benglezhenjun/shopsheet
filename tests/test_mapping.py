@@ -34,6 +34,41 @@ def test_normalize_orders_maps_common_chinese_headers():
     ]
 
 
+def test_normalize_orders_cleans_float_like_phone_values():
+    raw = pd.DataFrame(
+        [
+            {
+                "order_id": "O-1001",
+                "sku": "SKU-RED-M",
+                "quantity": 1,
+                "unit_price": 79.90,
+                "phone": 13800138000,
+                "shipping_address": "Shanghai Pudong",
+            },
+            {
+                "order_id": "O-1002",
+                "sku": "SKU-BLUE-S",
+                "quantity": 1,
+                "unit_price": 129.00,
+                "phone": None,
+                "shipping_address": "Hangzhou Xihu",
+            },
+            {
+                "order_id": "O-1003",
+                "sku": "SKU-GREEN-L",
+                "quantity": 1,
+                "unit_price": 49.90,
+                "phone": 13900139000,
+                "shipping_address": "Shenzhen Nanshan",
+            },
+        ]
+    )
+
+    normalized = normalize_orders(raw)
+
+    assert normalized["phone"].tolist() == ["13800138000", "", "13900139000"]
+
+
 def test_normalize_skus_maps_common_headers():
     raw = pd.DataFrame(
         [{"商品编码": "SKU-RED-M", "商品名称": "Red T-Shirt M", "成本价": "35.00"}]

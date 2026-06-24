@@ -30,7 +30,7 @@ def normalize_orders(raw: pd.DataFrame) -> pd.DataFrame:
     normalized = _rename_to_canonical(raw, ORDER_COLUMN_ALIASES)
     required = ["order_id", "sku", "quantity", "unit_price", "phone", "shipping_address"]
     _require_columns(normalized, required, "order")
-    return _coerce_columns(
+    cleaned = _coerce_columns(
         normalized,
         ordered_columns=[
             "order_id",
@@ -42,7 +42,10 @@ def normalize_orders(raw: pd.DataFrame) -> pd.DataFrame:
             "order_date",
         ],
         numeric_columns=["quantity", "unit_price"],
+        text_columns=["order_id", "sku", "shipping_address", "order_date"],
     )
+    cleaned["phone"] = cleaned["phone"].map(_clean_phone_value)
+    return cleaned
 
 
 def normalize_skus(raw: pd.DataFrame) -> pd.DataFrame:
@@ -52,6 +55,7 @@ def normalize_skus(raw: pd.DataFrame) -> pd.DataFrame:
         normalized,
         ordered_columns=["sku", "product_name", "cost"],
         numeric_columns=["cost"],
+        text_columns=["sku", "product_name"],
     )
 
 
@@ -62,6 +66,7 @@ def normalize_refunds(raw: pd.DataFrame) -> pd.DataFrame:
         normalized,
         ordered_columns=["refund_id", "order_id", "refund_amount", "reason"],
         numeric_columns=["refund_amount"],
+        text_columns=["refund_id", "order_id", "reason"],
     )
 
 
@@ -88,16 +93,45 @@ def _require_columns(frame: pd.DataFrame, required: list[str], table_name: str) 
 
 
 def _coerce_columns(
-    frame: pd.DataFrame, ordered_columns: list[str], numeric_columns: list[str]
+    frame: pd.DataFrame,
+    ordered_columns: list[str],
+    numeric_columns: list[str],
+    text_columns: list[str],
 ) -> pd.DataFrame:
     cleaned = frame.copy()
     for column in ordered_columns:
         if column not in cleaned.columns:
             cleaned[column] = ""
+    for column in text_columns:
+        cleaned[column] = cleaned[column].map(_clean_text_value)
     for column in numeric_columns:
-        cleaned[column] = pd.to_numeric(cleaned[column], errors="coerce").fillna(0)
+        cleaned[column] = _coerce_numeric_preserving_invalid(cleaned[column])
     return cleaned[ordered_columns]
 
 
 def _normalize_header(value: str) -> str:
     return value.strip().lower().replace("_", " ")
+
+
+def _coerce_numeric_preserving_invalid(series: pd.Series) -> pd.Series:
+    numeric = pd.to_numeric(series, errors="coerce")
+    original_text = series.astype("string").str.strip()
+    nonempty = series.notna() & original_text.ne("")
+    invalid = numeric.isna() & nonempty
+    cleaned = numeric.astype(object)
+    cleaned.loc[invalid] = series.loc[invalid]
+    cleaned.loc[~nonempty] = 0
+    return cleaned
+
+
+def _clean_text_value(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def _clean_phone_value(value: object) -> str:
+    text = _clean_text_value(value)
+    if text.endswith(".0") and text[:-2].isdigit():
+        return text[:-2]
+    return text

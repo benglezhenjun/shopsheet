@@ -21,7 +21,7 @@ function Invoke-Checked {
 Push-Location $PSScriptRoot\..
 try {
     Write-Host "== Backend tests =="
-    Invoke-Checked { python -m pytest -q }
+    Invoke-Checked { python -m pytest -q --cov=shopsheet --cov-report=term-missing --cov-fail-under=90 }
 
     Write-Host "== Backend lint =="
     Invoke-Checked { python -m ruff check src tests }
@@ -37,7 +37,7 @@ try {
 
     if (-not $SkipAudits) {
         Write-Host "== Frontend audit =="
-        Invoke-Checked { npm audit --audit-level=low }
+        Invoke-Checked { npm audit --audit-level=high }
     }
 
     Write-Host "== Frontend build =="

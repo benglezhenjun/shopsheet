@@ -21,6 +21,9 @@ def test_build_export_package_contains_merchant_deliverables():
     }
     assert "order_id,sku,quantity,unit_price" in package.files["clean_orders.csv"]
     assert "O-1001,SKU-RED-M,2,79.9" in package.files["clean_orders.csv"]
+    assert "unit_cost" not in package.files["clean_orders.csv"]
+    assert "SKU-MISSING" not in package.files["clean_orders.csv"]
+    assert "not-a-phone" not in package.files["clean_orders.csv"]
     assert "code,message,source_table,row" in package.files["issue_rows.csv"]
     assert "duplicate_order_id,Order ID appears more than once.,orders,3" in package.files[
         "issue_rows.csv"

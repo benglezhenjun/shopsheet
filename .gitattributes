@@ -1,0 +1,7 @@
+# Normalize all text files to LF in the repository to avoid noisy CRLF diffs.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending normalized.
+*.png binary
+*.ico binary
+*.svg text

@@ -10,7 +10,7 @@ test("merchant can upload sample files and download deliverables", async ({ page
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "ShopSheet" })).toBeVisible();
-  await expect(page.getByText("Live API data")).toBeVisible();
+  await expect(page.getByText("实时接口数据")).toBeVisible();
 
   await page
     .locator('input[name="order_file"]')
@@ -22,26 +22,28 @@ test("merchant can upload sample files and download deliverables", async ({ page
     .locator('input[name="refund_file"]')
     .setInputFiles(path.join(repoRoot, "examples", "refunds.csv"));
 
-  await page.getByRole("button", { name: "Analyze uploads" }).click();
+  await page.getByRole("button", { name: "分析上传文件" }).click();
 
-  await expect(page.getByText("Uploaded files analyzed successfully.")).toBeVisible();
-  const kpis = page.getByLabel("Selected KPIs");
-  await expect(kpis.getByText("Issue rows")).toBeVisible();
-  await expect(kpis.getByText("7", { exact: true })).toBeVisible();
-  await expect(page.getByText("duplicate order id")).toBeVisible();
+  await expect(page.getByText("上传文件分析完成。")).toBeVisible();
+  const kpis = page.getByLabel("核心指标");
+  const issueRowsCard = kpis.locator(".metric").filter({ hasText: "问题行" });
+  const cleanRowsCard = kpis.locator(".metric").filter({ hasText: "合格行" });
+  await expect(issueRowsCard.locator("strong")).toHaveText("7");
+  await expect(cleanRowsCard.locator("strong")).toHaveText("1");
+  await expect(page.getByText("重复订单号")).toBeVisible();
 
-  await expectDownload(page, "Clean orders", "clean_orders.csv", "O-1001,SKU-RED-M");
-  await expectDownload(page, "Issue rows", "issue_rows.csv", "source_table");
-  await expectDownload(page, "Report", "quality_report.md", "# ShopSheet Quality Report");
+  await expectDownload(page, "合格订单", "clean_orders.csv", "O-1001,SKU-RED-M");
+  await expectDownload(page, "问题行", "issue_rows.csv", "source_table");
+  await expectDownload(page, "质检报告", "quality_report.md", "# ShopSheet Quality Report");
 });
 
 test("merchant gets a clear message before choosing all files", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Analyze uploads" }).click();
+  await page.getByRole("button", { name: "分析上传文件" }).click();
 
   await expect(
-    page.getByText("Choose order, SKU, and refund files before running analysis.")
+    page.getByText("请先选择订单、SKU 和退款三个文件，再运行分析。")
   ).toBeVisible();
 });
 
@@ -60,9 +62,9 @@ test("merchant sees a readable validation error for bad table headers", async ({
     .locator('input[name="refund_file"]')
     .setInputFiles(path.join(repoRoot, "examples", "refunds.csv"));
 
-  await page.getByRole("button", { name: "Analyze uploads" }).click();
+  await page.getByRole("button", { name: "分析上传文件" }).click();
 
-  await expect(page.getByText(/Upload analysis failed: Missing required order columns/)).toBeVisible();
+  await expect(page.getByText(/上传分析失败：Missing required order columns/)).toBeVisible();
 });
 
 test("merchant sees a readable validation error for oversized uploads", async ({ page }) => {
@@ -83,10 +85,10 @@ test("merchant sees a readable validation error for oversized uploads", async ({
     .locator('input[name="refund_file"]')
     .setInputFiles(path.join(repoRoot, "examples", "refunds.csv"));
 
-  await page.getByRole("button", { name: "Analyze uploads" }).click();
+  await page.getByRole("button", { name: "分析上传文件" }).click();
 
   await expect(
-    page.getByText("Upload analysis failed: orders file exceeds 5 MB upload limit")
+    page.getByText("上传分析失败：orders file exceeds 5 MB upload limit")
   ).toBeVisible();
 });
 

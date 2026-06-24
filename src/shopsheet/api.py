@@ -6,6 +6,8 @@ from tempfile import TemporaryDirectory
 
 from fastapi import FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from shopsheet.exports import build_export_package
 from shopsheet.pipeline import build_audit_bundle
@@ -15,15 +17,15 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 app = FastAPI(
     title="ShopSheet API",
     description="Spreadsheet quality API for small ecommerce merchant exports.",
-    version="0.1.0",
+    version="1.0.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
+    # Localhost-only whitelist for the Vite operator workspace.
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["content-type"],
 )
 
 
@@ -32,8 +34,55 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "shopsheet"}
 
 
-@app.get("/api/demo-report")
-def demo_report() -> dict[str, object]:
+class Metrics(BaseModel):
+    order_rows: int
+    sku_rows: int
+    refund_rows: int
+    gross_sales: float
+    refund_amount: float
+    estimated_gross_margin: float
+    clean_order_count: int
+    excluded_order_count: int
+    issue_count: int
+
+
+class Issue(BaseModel):
+    code: str
+    message: str
+    count: int
+    rows: list[int]
+
+
+class IssueRow(BaseModel):
+    code: str
+    message: str
+    source_table: str
+    row: int
+
+
+class CleanOrder(BaseModel):
+    order_id: str
+    sku: str
+    quantity: float
+    unit_price: float
+    phone: str
+    shipping_address: str
+    order_date: str
+    line_amount: float
+    estimated_line_margin: float
+
+
+class AuditBundleResponse(BaseModel):
+    metrics: Metrics
+    issues: list[Issue]
+    issue_rows: list[IssueRow]
+    clean_orders: list[CleanOrder]
+    markdown_report: str
+    export_files: dict[str, str]
+
+
+@app.get("/api/demo-report", response_model=AuditBundleResponse)
+def demo_report() -> AuditBundleResponse:
     return _bundle_payload(_build_demo_bundle())
 
 
@@ -51,19 +100,21 @@ def demo_export(filename: str) -> Response:
     )
 
 
-@app.post("/api/analyze")
+@app.post("/api/analyze", response_model=AuditBundleResponse)
 async def analyze_uploads(
     order_file: UploadFile = File(...),
     sku_file: UploadFile = File(...),
     refund_file: UploadFile = File(...),
-) -> dict[str, object]:
+) -> AuditBundleResponse:
     with TemporaryDirectory() as temp_dir:
         temp_root = Path(temp_dir)
         order_path = await _save_upload(order_file, temp_root, "orders")
         sku_path = await _save_upload(sku_file, temp_root, "skus")
         refund_path = await _save_upload(refund_file, temp_root, "refunds")
         try:
-            bundle = build_audit_bundle(order_path, sku_path, refund_path)
+            bundle = await run_in_threadpool(
+                build_audit_bundle, order_path, sku_path, refund_path
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _bundle_payload(bundle)

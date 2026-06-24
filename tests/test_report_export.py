@@ -31,5 +31,6 @@ def test_render_markdown_report_includes_metrics_and_issue_counts():
     assert "# ShopSheet Quality Report" in markdown
     assert "| Gross sales | 626.50 |" in markdown
     assert "| Estimated gross margin | 271.50 |" in markdown
+    assert "unknown-cost SKUs are excluded from margin contribution" in markdown
     assert "| duplicate_order_id | 2 | 4, 5 |" in markdown
     assert "| invalid_phone | 1 | 3 |" in markdown

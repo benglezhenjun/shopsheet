@@ -18,6 +18,11 @@ def render_markdown_report(report: QualityReport) -> str:
         f"| Refund amount | {report.metrics['refund_amount']:.2f} |",
         f"| Estimated gross margin | {report.metrics['estimated_gross_margin']:.2f} |",
         "",
+        (
+            "Note: estimated gross margin is a rough estimate; unknown-cost SKUs are "
+            "excluded from margin contribution, and refunds are deducted by total amount."
+        ),
+        "",
         "## Issues",
         "",
         "| Code | Count | Rows |",

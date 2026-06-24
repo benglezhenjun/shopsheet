@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from shopsheet.economics import enrich_orders
 from shopsheet.io import load_table
 from shopsheet.mapping import normalize_orders, normalize_refunds, normalize_skus
 from shopsheet.quality import analyze_shop_data
@@ -28,7 +29,14 @@ def build_audit_bundle(
     refunds = normalize_refunds(load_table(refund_path))
     report = analyze_shop_data(orders, skus, refunds)
 
-    clean_orders = _build_clean_orders(orders, skus)
+    dirty_order_indexes = {
+        row - 2
+        for issue in report.issues
+        if _source_table_for_issue(issue.code) == "orders"
+        for row in issue.rows
+        if row >= 2
+    }
+    clean_orders = _build_clean_orders(orders, skus, dirty_order_indexes)
     issue_rows = [
         {
             "code": issue.code,
@@ -49,6 +57,8 @@ def build_audit_bundle(
         for issue in report.issues
     ]
     metrics = dict(report.metrics)
+    metrics["clean_order_count"] = len(clean_orders)
+    metrics["excluded_order_count"] = metrics["order_rows"] - len(clean_orders)
     metrics["issue_count"] = len(issue_rows)
 
     return AuditBundle(
@@ -60,20 +70,23 @@ def build_audit_bundle(
     )
 
 
-def _build_clean_orders(orders: pd.DataFrame, skus: pd.DataFrame) -> list[dict[str, object]]:
-    sku_costs = skus.set_index("sku")["cost"].to_dict()
-    output = orders.copy()
-    output["line_amount"] = (output["quantity"] * output["unit_price"]).round(2)
-    output["unit_cost"] = output["sku"].map(sku_costs).fillna(0)
-    output["estimated_line_margin"] = (
-        output["line_amount"] - output["quantity"] * output["unit_cost"]
-    ).round(2)
+def _build_clean_orders(
+    orders: pd.DataFrame, skus: pd.DataFrame, dirty_indexes: set[int]
+) -> list[dict[str, object]]:
+    output = enrich_orders(orders, skus)
+    output = output.drop(index=dirty_indexes, errors="ignore").drop(
+        columns=["unit_cost"], errors="ignore"
+    )
     return output.to_dict("records")
 
 
 def _source_table_for_issue(code: str) -> str:
-    if code in {"duplicate_sku", "negative_sku_cost"}:
+    if code in {"duplicate_sku", "negative_sku_cost", "invalid_cost"}:
         return "skus"
-    if code in {"refund_unknown_order", "refund_exceeds_order_amount"}:
+    if code in {
+        "invalid_refund_amount",
+        "refund_unknown_order",
+        "refund_exceeds_order_amount",
+    }:
         return "refunds"
     return "orders"

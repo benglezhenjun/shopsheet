@@ -23,16 +23,16 @@ Small merchants often reconcile marketplace exports in Excel before shipping, re
 
 ## Quick Start
 
-Backend:
+Backend (macOS, Linux, and Windows):
 
-```powershell
+```bash
 python -m pip install -e ".[dev]"
 uvicorn shopsheet.api:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Frontend:
 
-```powershell
+```bash
 cd frontend
 npm ci
 npm run dev
@@ -40,7 +40,18 @@ npm run dev
 
 Open `http://127.0.0.1:5173`.
 
-If port `8000` is already occupied, start the backend on another port and point Vite to it:
+If port `8000` is already occupied, start the backend on another port and point Vite to it.
+
+macOS / Linux:
+
+```bash
+PYTHONPATH=src python -m uvicorn shopsheet.api:app --host 127.0.0.1 --port 8001
+
+cd frontend
+VITE_API_PROXY="http://127.0.0.1:8001" npm run dev -- --port 5173
+```
+
+Windows (PowerShell):
 
 ```powershell
 $env:PYTHONPATH="src"
@@ -51,49 +62,39 @@ $env:VITE_API_PROXY="http://127.0.0.1:8001"
 npm run dev -- --port 5173
 ```
 
-Windows helper:
+Windows helper scripts (optional) — write logs/PID metadata under `.runtime/`:
 
 ```powershell
 .\scripts\start-dev.ps1
-```
-
-The helper writes local logs and process metadata under `.runtime/`. Stop the dev services with:
-
-```powershell
 .\scripts\stop-dev.ps1
 ```
 
 ## Validation
 
-Backend tests:
+Backend tests (any OS):
 
-```powershell
+```bash
 python -m pytest -q
 python -m ruff check src tests
 ```
 
-Frontend build and browser workflow:
+Frontend build and browser workflow (any OS):
 
-```powershell
+```bash
 cd frontend
-npm audit --audit-level=low
+npm audit --audit-level=high
 npm run build
 npm run e2e -- --reporter=line
 ```
 
-Full local verification script:
+Docker runtime — macOS / Linux:
 
-```powershell
-.\scripts\verify.ps1
+```bash
+(cd frontend && npm run build)
+SHOPSHEET_BACKEND_PORT=18000 SHOPSHEET_FRONTEND_PORT=15173 docker compose up -d --build
 ```
 
-If your network blocks PyPI, OSV, or npm audit endpoints, run the functional checks first:
-
-```powershell
-.\scripts\verify.ps1 -SkipAudits
-```
-
-Docker runtime:
+Docker runtime — Windows (PowerShell):
 
 ```powershell
 cd frontend
@@ -101,15 +102,16 @@ npm run build
 cd ..
 $env:SHOPSHEET_BACKEND_PORT="18000"
 $env:SHOPSHEET_FRONTEND_PORT="15173"
-docker compose config
 docker compose up -d --build
 ```
 
 Open `http://127.0.0.1:15173` for the Docker-served frontend.
 
-Scripted Docker smoke test:
+Windows full-verification helpers (optional) — `verify.ps1` runs the full local gate; pass `-SkipAudits` when PyPI/OSV/npm endpoints are blocked:
 
 ```powershell
+.\scripts\verify.ps1
+.\scripts\verify.ps1 -SkipAudits
 .\scripts\smoke-docker.ps1
 ```
 
@@ -134,6 +136,18 @@ Demo export filenames:
 - `issue_rows.csv`
 - `quality_report.md`
 
+## Deliverables
+
+- `clean_orders.csv` contains order rows that passed every quality check, plus calculated amount and margin columns.
+- `issue_rows.csv` contains one row per detected issue and source row; the same order can appear multiple times when it has multiple issues.
+- `quality_report.md` summarizes metrics and issue counts for review.
+
+These deliverables answer different review questions, so their row counts are not expected to add up to each other.
+
+## Metrics
+
+`estimated_gross_margin` is a rough estimate: order rows with unknown SKU cost are excluded from margin contribution, and refunds are deducted by total refund amount.
+
 ## Example Data
 
 Synthetic merchant files live in `examples/`:
@@ -154,18 +168,9 @@ src/shopsheet/        Python data core and FastAPI app
 tests/                Backend behavior tests
 examples/             Synthetic merchant exports
 frontend/             React/Vite operator workspace
-docs/                 Product brief and implementation plans
+docs/                 Product brief and architecture notes
 .github/workflows/    CI checks
 ```
-
-## Project Maturity
-
-- [Showcase acceptance](docs/showcase-acceptance.md)
-- [Completion ladder](docs/completion-ladder.md)
-- [Verification log](docs/verification.md)
-- [Release checklist](docs/release-checklist.md)
-- [Architecture](docs/architecture.md)
-- [Roadmap](ROADMAP.md)
 
 ## Non-Goals
 
