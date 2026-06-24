@@ -1,5 +1,9 @@
 # ShopSheet
 
+[![CI](https://github.com/benglezhenjun/shopsheet/actions/workflows/ci.yml/badge.svg)](https://github.com/benglezhenjun/shopsheet/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/benglezhenjun/shopsheet)](https://github.com/benglezhenjun/shopsheet/releases)
+
 ShopSheet is a local-first spreadsheet quality workbench for small ecommerce merchants. It turns exported order, SKU, and refund files into clean order rows, issue queues, and a reviewable business report.
 
 ## Why It Exists
